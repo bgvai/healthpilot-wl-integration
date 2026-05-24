@@ -3,452 +3,592 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HealthPilot × Ted's Health WL — The Long-Term Architecture</title>
+<title>HealthPilot × Ted's Health WL — Integration Architectures</title>
 <style>
   :root{
-    --hp:#0d9488; --hp-soft:#ccfbf1; --hp-line:#5eead4;
+    --hp:#0d9488; --hp-soft:#ccfbf1; --hp-line:#5eead4; --hp-deep:#115e59;
     --wl:#1a365d; --wl-soft:#dbe4f0; --wl-line:#3182ce;
-    --uni:#7c3aed; --uni-soft:#ede9fe; --uni-line:#c4b5fd;
+    --uni:#7c3aed; --uni-soft:#ede9fe; --uni-line:#c4b5fd; --uni-deep:#5b21b6;
     --ink:#0f172a; --muted:#64748b; --bg:#eef2f6; --card:#ffffff;
     --good:#16a34a; --bad:#dc2626; --warn:#d97706; --line:#e2e8f0;
+    --code:#1e293b;
   }
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
-  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 24px 90px}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.6;}
+  .wrap{max-width:1060px;margin:0 auto;padding:0 24px 100px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;background:#e7ecf2;color:#0b3b63;padding:1px 6px;border-radius:5px}
 
   /* hero */
-  .hero{text-align:center;padding:64px 0 8px}
+  .hero{text-align:center;padding:60px 0 26px}
   .kicker{font-size:12px;font-weight:800;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
-  .hero h1{font-size:36px;line-height:1.12;margin:0 auto 16px;letter-spacing:-1px;max-width:780px}
+  .hero h1{font-size:34px;line-height:1.14;margin:0 auto 14px;letter-spacing:-.8px;max-width:760px}
   .hero h1 .u{background:linear-gradient(120deg,var(--hp),var(--uni) 55%,var(--wl));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .verdict-pill{display:inline-flex;align-items:center;gap:9px;background:#0f172a;color:#fff;font-size:14px;font-weight:600;padding:10px 18px;border-radius:999px;box-shadow:0 8px 24px rgba(15,23,42,.18)}
-  .verdict-pill .dot{width:9px;height:9px;border-radius:50%;background:#34d399;box-shadow:0 0 0 4px rgba(52,211,153,.25)}
-  .lede{max-width:680px;margin:22px auto 0;color:#475569;font-size:16px}
+  .hero p{max-width:660px;margin:0 auto;color:#475569;font-size:16px}
 
-  section{margin-top:64px}
-  .sec-num{font-size:12px;font-weight:800;letter-spacing:1.5px;color:var(--hp);text-transform:uppercase}
-  .sec-title{font-size:25px;font-weight:800;margin:6px 0 6px;letter-spacing:-.4px}
-  .sec-intro{color:var(--muted);font-size:15.5px;max-width:760px;margin:0 0 24px}
+  /* tab bar */
+  .tabbar{position:sticky;top:0;z-index:30;background:rgba(238,242,246,.86);backdrop-filter:blur(10px);padding:12px 0;margin-bottom:8px;border-bottom:1px solid var(--line)}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:center}
+  .tab{cursor:pointer;border:1px solid var(--line);background:#fff;color:#475569;font-size:13.5px;font-weight:600;padding:9px 16px;border-radius:999px;transition:all .15s;user-select:none}
+  .tab:hover{border-color:#cbd5e1}
+  .tab .t-let{font-weight:800;margin-right:5px}
+  .tab.active{color:#fff;border-color:transparent}
+  .tab[data-tab="overview"].active{background:#0f172a}
+  .tab[data-tab="a"].active{background:var(--wl)}
+  .tab[data-tab="b"].active{background:var(--hp-deep)}
+  .tab[data-tab="c"].active{background:var(--uni)}
+  .tab[data-tab="rec"].active{background:var(--good)}
 
-  /* two halves */
-  .halves{display:grid;grid-template-columns:1fr 52px 1fr;align-items:stretch}
-  .half{background:var(--card);border-radius:16px;padding:24px;border:1px solid var(--line)}
+  .panel{display:none;animation:fade .25s ease}
+  .panel.active{display:block}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+  h2.sec{font-size:24px;font-weight:800;letter-spacing:-.4px;margin:26px 0 4px}
+  .sec-sub{color:var(--muted);font-size:15.5px;max-width:780px;margin:0 0 22px}
+  h3.blk{font-size:17px;font-weight:800;margin:30px 0 10px;display:flex;align-items:center;gap:9px}
+  h3.blk .ic{font-size:18px}
+
+  /* two halves (overview) */
+  .halves{display:grid;grid-template-columns:1fr 48px 1fr;align-items:stretch}
+  .half{background:var(--card);border-radius:16px;padding:22px;border:1px solid var(--line)}
   .half.hp{border-top:5px solid var(--hp)} .half.wl{border-top:5px solid var(--wl)}
   .pill{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:4px 10px;border-radius:999px}
-  .pill.hp{background:var(--hp-soft);color:var(--hp)} .pill.wl{background:var(--wl-soft);color:var(--wl)}
-  .half h3{margin:10px 0 2px;font-size:18px}
-  .role{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
-  .flow{display:flex;flex-direction:column;gap:7px;margin:10px 0 16px}
-  .step{display:flex;align-items:center;gap:9px;font-size:13.5px;background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:8px 11px}
-  .step .n{flex:0 0 20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+  .pill.hp{background:var(--hp-soft);color:var(--hp-deep)} .pill.wl{background:var(--wl-soft);color:var(--wl)}
+  .half h4{margin:10px 0 2px;font-size:17px} .role{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:12px}
+  .flow{display:flex;flex-direction:column;gap:6px;margin:8px 0 14px}
+  .step{display:flex;align-items:center;gap:9px;font-size:13px;background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:7px 10px}
+  .step .n{flex:0 0 19px;height:19px;border-radius:50%;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
   .hp .step .n{background:var(--hp)} .wl .step .n{background:var(--wl)}
-  .has h4,.hasnt h4{margin:14px 0 7px;font-size:11.5px;letter-spacing:.5px;text-transform:uppercase}
-  .has h4{color:var(--good)} .hasnt h4{color:var(--bad)}
-  .tags{display:flex;flex-wrap:wrap;gap:6px}
-  .tag{font-size:12px;padding:3px 9px;border-radius:7px}
+  .mini-h{margin:12px 0 6px;font-size:11px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+  .tags{display:flex;flex-wrap:wrap;gap:5px}
+  .tag{font-size:11.5px;padding:3px 8px;border-radius:6px}
   .tag.no{color:var(--bad);background:#fef2f2;border:1px solid #fecaca;text-decoration:line-through}
   .tag.yes{color:var(--good);background:#f0fdf4;border:1px solid #bbf7d0}
-  .vs{display:flex;align-items:center;justify-content:center}
-  .vs span{background:var(--ink);color:#fff;font-size:11px;font-weight:800;width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center}
-  .takeaway{text-align:center;font-size:15px;margin-top:18px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:12px;padding:14px 18px}
+  .vs{display:flex;align-items:center;justify-content:center} .vs span{background:var(--ink);color:#fff;font-size:11px;font-weight:800;width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .takeaway{text-align:center;font-size:15px;margin-top:16px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:13px 18px}
   .takeaway b{color:var(--uni)}
 
-  /* verdict block */
-  .verdict{background:linear-gradient(135deg,#0b1324,#1e293b);color:#fff;border-radius:20px;padding:40px;text-align:center;position:relative;overflow:hidden}
-  .verdict::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 200px at 50% -10%,rgba(124,58,237,.35),transparent);pointer-events:none}
-  .verdict h2{font-size:28px;margin:0 0 10px;letter-spacing:-.5px;position:relative}
-  .verdict h2 .hl{background:linear-gradient(120deg,#5eead4,#c4b5fd);-webkit-background-clip:text;background-clip:text;color:transparent}
-  .verdict p{position:relative;max-width:640px;margin:0 auto;color:#cbd5e1;font-size:16px}
-  .verdict .one{display:inline-block;font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#a5f3fc;border:1px solid rgba(165,243,252,.4);border-radius:999px;padding:5px 14px;margin-bottom:18px}
+  /* status-today callout */
+  .today{background:#fffbeb;border:1px solid #fde68a;border-left:4px solid var(--warn);border-radius:10px;padding:14px 16px;margin-top:18px;font-size:14px}
+  .today b{color:#92400e}
 
-  /* three shapes */
-  .shapes{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px}
-  .shape{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;position:relative;display:flex;flex-direction:column}
-  .shape.win{border:2px solid var(--good);box-shadow:0 12px 30px rgba(22,163,74,.12)}
-  .shape .verdict-tag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);font-size:10.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:4px 12px;border-radius:999px;white-space:nowrap}
-  .shape.lose .verdict-tag{background:#fef2f2;color:var(--bad);border:1px solid #fecaca}
-  .shape.win .verdict-tag{background:var(--good);color:#fff}
-  .shape h4{margin:12px 0 4px;font-size:16px}
-  .shape .what{font-size:12.5px;color:var(--muted);min-height:34px;margin-bottom:12px}
-  .mini{display:flex;align-items:center;justify-content:center;gap:5px;background:#f8fafc;border:1px dashed var(--line);border-radius:10px;padding:14px 8px;margin-bottom:12px;min-height:72px}
-  .chip{font-size:10.5px;font-weight:700;padding:6px 8px;border-radius:7px;border:1.5px solid;text-align:center;line-height:1.2}
-  .chip.hp{background:var(--hp-soft);border-color:var(--hp-line);color:#115e59}
-  .chip.wl{background:var(--wl-soft);border-color:var(--wl-line);color:var(--wl)}
-  .chip.uni{background:linear-gradient(135deg,var(--hp-soft),var(--uni-soft) 60%,var(--wl-soft));border-color:var(--uni-line);color:#4c1d95}
-  .mini .gap{color:#cbd5e1;font-size:16px}
-  .mini .brk{color:var(--bad);font-size:15px;font-weight:800}
-  .shape ul{margin:0;padding-left:0;list-style:none}
-  .shape li{font-size:12.5px;padding:4px 0 4px 20px;position:relative;color:#334155}
-  .shape li::before{position:absolute;left:0;top:4px;font-weight:800;font-size:12px}
-  .shape.lose li::before{content:"✕";color:var(--bad)}
-  .shape.win li::before{content:"✓";color:var(--good)}
+  /* matrix */
+  table.matrix{width:100%;border-collapse:collapse;margin-top:8px;background:#fff;border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13.5px}
+  table.matrix th,table.matrix td{padding:11px 13px;text-align:left;border-bottom:1px solid var(--line)}
+  table.matrix thead th{background:#f8fafc;font-size:11.5px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+  table.matrix tbody tr:last-child td{border-bottom:0}
+  table.matrix td:first-child{font-weight:600}
+  .c-a{color:var(--wl);font-weight:700} .c-b{color:var(--hp-deep);font-weight:700} .c-c{color:var(--uni);font-weight:700}
+  .dot-good{color:var(--good);font-weight:800} .dot-bad{color:var(--bad);font-weight:800} .dot-mid{color:var(--warn);font-weight:800}
 
-  /* reasoning pillars */
-  .pillars{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  .pillar{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;border-left:4px solid var(--uni)}
-  .pillar .pnum{font-size:13px;font-weight:800;color:var(--uni);width:30px;height:30px;border-radius:9px;background:var(--uni-soft);display:flex;align-items:center;justify-content:center;margin-bottom:12px}
-  .pillar h4{margin:0 0 8px;font-size:17px;letter-spacing:-.2px}
-  .pillar p{margin:0 0 10px;font-size:14px;color:#334155}
-  .pillar p:last-child{margin-bottom:0}
-  .pillar .punch{font-size:13.5px;font-weight:600;color:var(--ink);background:#faf5ff;border:1px solid var(--uni-line);border-radius:9px;padding:9px 12px;margin-top:4px}
+  /* option header */
+  .opt-head{display:flex;align-items:flex-start;gap:16px;margin-top:22px}
+  .opt-badge{flex:0 0 auto;width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:800;color:#fff}
+  .a .opt-badge{background:var(--wl)} .b .opt-badge{background:var(--hp-deep)} .c .opt-badge{background:var(--uni)}
+  .opt-head h2{margin:0;font-size:25px;letter-spacing:-.5px}
+  .opt-head .tline{color:var(--muted);font-size:14.5px;margin-top:2px}
+  .badges{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0 4px}
+  .bdg{font-size:11.5px;font-weight:700;padding:5px 11px;border-radius:8px;border:1px solid}
+  .bdg.effort-zero{background:#f0fdf4;color:var(--good);border-color:#bbf7d0}
+  .bdg.effort-mid{background:#fff7ed;color:var(--warn);border-color:#fed7aa}
+  .bdg.effort-high{background:#fef2f2;color:var(--bad);border-color:#fecaca}
+  .bdg.neutral{background:#f1f5f9;color:#475569;border-color:#e2e8f0}
 
-  /* end-state pipeline */
-  .pipe{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px 24px}
-  .pipe .brand-frame{border:2px solid var(--uni-line);border-radius:16px;padding:26px 16px 18px;position:relative;background:linear-gradient(180deg,#faf5ff,#ffffff)}
-  .pipe .brand-frame .flabel{position:absolute;top:-12px;left:24px;background:#fff;border:1px solid var(--uni-line);color:#6d28d9;font-size:11px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;padding:3px 10px;border-radius:999px}
-  .pipeline{display:flex;align-items:stretch;justify-content:center;flex-wrap:wrap;gap:0}
-  .pnode{flex:1 1 0;min-width:130px;background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:14px 12px;text-align:center}
-  .pnode .tag2{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:2px 8px;border-radius:999px;display:inline-block;margin-bottom:8px}
-  .pnode.from-hp .tag2{background:var(--hp-soft);color:var(--hp)}
-  .pnode.from-wl .tag2{background:var(--wl-soft);color:var(--wl)}
-  .pnode h5{margin:0 0 4px;font-size:14px}
-  .pnode small{font-size:11.5px;color:var(--muted);display:block;line-height:1.35}
-  .parrow{flex:0 0 30px;display:flex;align-items:center;justify-content:center;color:#a78bda;font-size:20px;font-weight:700}
-  .pipe .thread{text-align:center;margin-top:18px;font-size:13.5px;color:#6d28d9;font-weight:600}
-  .pipe .thread span{background:var(--uni-soft);border:1px solid var(--uni-line);border-radius:999px;padding:6px 14px}
+  .usecase{background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:18px;border-left:4px solid #94a3b8}
+  .a .usecase{border-left-color:var(--wl-line)} .b .usecase{border-left-color:var(--hp-line)} .c .usecase{border-left-color:var(--uni-line)}
+  .usecase h3{margin:0 0 6px;font-size:14px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+  .usecase p{margin:0;font-size:15px}
 
-  /* keep / drop */
-  .kd{display:grid;grid-template-columns:1fr 1fr;gap:18px}
-  .kd .box{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px}
-  .kd .box.keep{border-top:4px solid var(--good)}
-  .kd .box.drop{border-top:4px solid var(--bad)}
-  .kd h4{margin:0 0 4px;font-size:16px;display:flex;align-items:center;gap:8px}
-  .kd .sub{font-size:12.5px;color:var(--muted);margin-bottom:14px}
-  .kd ul{margin:0;padding-left:0;list-style:none}
-  .kd li{font-size:14px;padding:6px 0 6px 24px;position:relative;border-bottom:1px solid #f1f5f9}
-  .kd li:last-child{border-bottom:0}
-  .kd li::before{position:absolute;left:0;top:6px;font-weight:800}
-  .kd .keep li::before{content:"✓";color:var(--good)}
-  .kd .drop li::before{content:"✕";color:var(--bad)}
-  .kd li b{display:block;font-size:12.5px;color:var(--muted);font-weight:500;margin-top:1px}
+  /* architecture diagram */
+  .arch{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px 18px;margin-top:14px}
+  .diag{display:flex;align-items:stretch;justify-content:center;flex-wrap:wrap;gap:0}
+  .dn{flex:0 1 auto;min-width:120px;max-width:170px;border-radius:11px;padding:11px 12px;text-align:center;border:2px solid;font-size:12.5px;font-weight:600}
+  .dn small{display:block;font-weight:400;font-size:10.5px;color:var(--muted);margin-top:3px;line-height:1.35}
+  .dn.hp{background:var(--hp-soft);border-color:var(--hp-line);color:var(--hp-deep)}
+  .dn.wl{background:var(--wl-soft);border-color:var(--wl-line);color:var(--wl)}
+  .dn.uni{background:linear-gradient(135deg,var(--hp-soft),var(--uni-soft) 60%,var(--wl-soft));border-color:var(--uni-line);color:var(--uni-deep)}
+  .dn.ghost{background:#f8fafc;border:2px dashed var(--line);color:var(--muted)}
+  .dn.new{position:relative}
+  .dn.new::after{content:"NEW";position:absolute;top:-9px;right:-7px;background:var(--bad);color:#fff;font-size:8.5px;font-weight:800;padding:2px 5px;border-radius:5px;letter-spacing:.3px}
+  .da{flex:0 0 38px;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:19px}
+  .da small{font-size:8.5px;color:#94a3b8;display:block;text-transform:uppercase;letter-spacing:.3px;margin-top:2px;text-align:center}
+  .diag-frame{border:2px dashed;border-radius:14px;padding:18px 12px 12px;position:relative;display:flex;align-items:stretch;justify-content:center;flex-wrap:wrap;gap:0}
+  .diag-frame.hp{border-color:var(--hp-line)} .diag-frame.wl{border-color:var(--wl-line)} .diag-frame.uni{border-color:var(--uni-line)}
+  .diag-frame .fl{position:absolute;top:-10px;left:16px;background:#fff;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;padding:0 7px}
+  .diag-frame.hp .fl{color:var(--hp-deep)} .diag-frame.wl .fl{color:var(--wl)} .diag-frame.uni .fl{color:var(--uni-deep)}
+  .arch .legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:14px;font-size:11.5px;color:var(--muted)}
+  .arch .legend span{display:inline-flex;align-items:center;gap:5px}
+  .lg-box{width:13px;height:13px;border-radius:3px;border:1.5px solid}
 
-  /* decision */
-  .decision{background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff;border-radius:20px;padding:36px;text-align:center}
-  .decision .one{display:inline-block;font-size:12px;font-weight:800;letter-spacing:1px;text-transform:uppercase;color:#c7d2fe;border:1px solid rgba(199,210,254,.35);border-radius:999px;padding:5px 14px;margin-bottom:16px}
-  .decision h3{font-size:22px;margin:0 0 12px;letter-spacing:-.3px}
-  .decision .q{font-size:17px;color:#e0e7ff;max-width:640px;margin:0 auto 24px;font-weight:600}
-  .branches{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:780px;margin:0 auto;text-align:left}
-  .branch{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:13px;padding:18px}
-  .branch .if{font-size:11.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#a5b4fc;margin-bottom:7px}
-  .branch .then{font-size:14.5px;color:#eef2ff}
-  .branch .then b{color:#fff}
-  .branch.primary{background:rgba(94,234,212,.1);border-color:rgba(94,234,212,.4)}
-  .branch.primary .if{color:#5eead4}
+  /* steps numbered (how it works) */
+  ol.howto{counter-reset:s;list-style:none;padding:0;margin:14px 0 0}
+  ol.howto li{position:relative;padding:0 0 14px 40px;font-size:14.5px}
+  ol.howto li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:0;width:26px;height:26px;border-radius:50%;background:#0f172a;color:#fff;font-size:12.5px;font-weight:700;display:flex;align-items:center;justify-content:center}
+  ol.howto li b{color:var(--ink)}
+  .b ol.howto li::before{background:var(--hp-deep)} .c ol.howto li::before{background:var(--uni)} .a ol.howto li::before{background:var(--wl)}
 
-  /* principle footer */
-  .principle{margin-top:48px;background:#fff;border:1px dashed var(--uni-line);border-radius:14px;padding:18px 22px;display:flex;gap:14px;align-items:flex-start}
-  .principle .ic{font-size:20px}
-  .principle p{margin:0;font-size:14px;color:#475569}
-  .principle b{color:var(--ink)}
-  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:40px}
-  .toc{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:30px}
-  .toc a{font-size:12.5px;color:#475569;text-decoration:none;background:#fff;border:1px solid var(--line);padding:6px 12px;border-radius:999px}
-  .toc a:hover{border-color:var(--uni-line);color:var(--uni)}
+  /* grounded-in-code */
+  .grounded{background:var(--code);color:#e2e8f0;border-radius:12px;padding:18px 20px;margin-top:16px;font-size:13px}
+  .grounded h4{margin:0 0 10px;font-size:12px;letter-spacing:.6px;text-transform:uppercase;color:#94a3b8}
+  .grounded .gline{display:flex;gap:10px;padding:5px 0;border-bottom:1px solid #334155;align-items:baseline}
+  .grounded .gline:last-child{border-bottom:0}
+  .grounded .gk{flex:0 0 86px;font-size:10.5px;font-weight:800;letter-spacing:.4px;text-transform:uppercase}
+  .gk.exist{color:#34d399} .gk.newp{color:#fca5a5}
+  .grounded code{background:#0b1220;color:#7dd3fc;font-size:12px}
+  .grounded .gtxt{color:#cbd5e1}
+
+  /* pros cons */
+  .pc{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+  .pc .box{background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px 20px}
+  .pc .box.pro{border-top:4px solid var(--good)} .pc .box.con{border-top:4px solid var(--bad)}
+  .pc h4{margin:0 0 10px;font-size:14px;letter-spacing:.4px;text-transform:uppercase}
+  .pc .pro h4{color:var(--good)} .pc .con h4{color:var(--bad)}
+  .pc ul{margin:0;padding-left:0;list-style:none}
+  .pc li{font-size:14px;padding:6px 0 6px 23px;position:relative;border-bottom:1px solid #f1f5f9}
+  .pc li:last-child{border-bottom:0}
+  .pc li::before{position:absolute;left:0;top:6px;font-weight:800}
+  .pc .pro li::before{content:"✓";color:var(--good)} .pc .con li::before{content:"✕";color:var(--bad)}
+
+  /* build box */
+  .build{background:#f8fafc;border:1px solid var(--line);border-radius:13px;padding:18px 20px;margin-top:16px}
+  .build h4{margin:0 0 12px;font-size:14px;letter-spacing:.4px;text-transform:uppercase;color:var(--muted)}
+  .build .brow{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #eef2f6;font-size:14px}
+  .build .brow:last-child{border-bottom:0}
+  .build .bside{flex:0 0 130px;font-weight:700;font-size:12.5px}
+  .build .bside.hp{color:var(--hp-deep)} .build .bside.wl{color:var(--wl)} .build .bside.fe{color:#475569}
+
+  /* recommendation */
+  .rec-hero{background:linear-gradient(135deg,#052e2b,#064e3b);color:#fff;border-radius:18px;padding:34px;text-align:center;position:relative;overflow:hidden}
+  .rec-hero::after{content:"";position:absolute;inset:0;background:radial-gradient(600px 200px at 50% -10%,rgba(52,211,153,.3),transparent)}
+  .rec-hero .lean{font-size:12px;font-weight:800;letter-spacing:1.2px;text-transform:uppercase;color:#6ee7b7;position:relative}
+  .rec-hero h2{font-size:28px;margin:10px 0 12px;position:relative;letter-spacing:-.5px}
+  .rec-hero h2 .hl{background:linear-gradient(120deg,#5eead4,#a7f3d0);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .rec-hero p{position:relative;max-width:660px;margin:0 auto;color:#d1fae5;font-size:15.5px}
+  .when{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-top:20px}
+  .when .w{background:#fff;border:1px solid var(--line);border-radius:13px;padding:18px;border-top:4px solid}
+  .when .w.a{border-top-color:var(--wl)} .when .w.b{border-top-color:var(--hp-deep)} .when .w.c{border-top-color:var(--uni)}
+  .when .w .lab{font-size:12px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;margin-bottom:6px}
+  .when .w.a .lab{color:var(--wl)} .when .w.b .lab{color:var(--hp-deep)} .when .w.c .lab{color:var(--uni)}
+  .when .w p{margin:0;font-size:13.5px;color:#334155}
+  .when .w .pick{display:inline-block;margin-top:10px;font-size:11px;font-weight:800;letter-spacing:.4px;text-transform:uppercase;padding:3px 9px;border-radius:999px}
+  .when .w.c .pick{background:var(--uni-soft);color:var(--uni-deep)}
+  .when .w.a .pick,.when .w.b .pick{background:#f1f5f9;color:#64748b}
+
+  .decision{background:linear-gradient(135deg,#1e1b4b,#312e81);color:#fff;border-radius:18px;padding:30px;margin-top:22px;text-align:center}
+  .decision h3{margin:0 0 10px;font-size:20px}
+  .decision .q{font-size:17px;color:#e0e7ff;max-width:620px;margin:0 auto 20px;font-weight:600}
+  .branches{display:grid;grid-template-columns:1fr 1fr;gap:14px;max-width:760px;margin:0 auto;text-align:left}
+  .branch{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:12px;padding:16px}
+  .branch .if{font-size:11px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#a5b4fc;margin-bottom:6px}
+  .branch .then{font-size:14px;color:#eef2ff} .branch .then b{color:#fff}
+  .branch.primary{background:rgba(94,234,212,.1);border-color:rgba(94,234,212,.4)} .branch.primary .if{color:#5eead4}
+
+  .principle{margin-top:26px;background:#fff;border:1px dashed var(--uni-line);border-radius:14px;padding:18px 22px;display:flex;gap:14px;align-items:flex-start}
+  .principle .ic2{font-size:20px} .principle p{margin:0;font-size:14px;color:#475569} .principle b{color:var(--ink)}
+
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:46px}
+  .navhint{text-align:center;color:var(--muted);font-size:13px;margin:18px 0 0}
 
   @media(max-width:880px){
     .halves{grid-template-columns:1fr} .vs{padding:8px 0}
-    .shapes,.pillars,.kd,.branches{grid-template-columns:1fr}
-    .pipeline{flex-direction:column} .parrow{transform:rotate(90deg);padding:4px 0}
-    .hero h1{font-size:28px}
+    .pc,.branches{grid-template-columns:1fr} .when{grid-template-columns:1fr}
+    .diag,.diag-frame{flex-direction:column} .da{transform:rotate(90deg);padding:4px 0}
+    .hero h1{font-size:27px}
   }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <!-- HERO -->
   <div class="hero">
-    <div class="kicker">HealthPilot × Ted's Health White-Label · Architecture Decision</div>
-    <h1>Two products today. <span class="u">One platform</span> for the long term.</h1>
-    <div class="verdict-pill"><span class="dot"></span>Verdict: merge them into a single full-stack men's-health platform</div>
-    <p class="lede">A direct read of both codebases, followed to its honest conclusion. Not a phased compromise, not a bridge that lingers. The permanent end-state and the reasoning that forces it.</p>
-    <div class="toc">
-      <a href="#finding">1 · The finding</a>
-      <a href="#verdict">2 · The verdict</a>
-      <a href="#shapes">3 · Three architectures</a>
-      <a href="#why">4 · Why one platform</a>
-      <a href="#endstate">5 · What it looks like</a>
-      <a href="#keepdrop">6 · Keep vs drop</a>
-      <a href="#decision">7 · The one decision</a>
+    <div class="kicker">HealthPilot × Ted's Health White-Label</div>
+    <h1>Three ways to put a <span class="u">funnel and a clinic</span> together</h1>
+    <p>Each architecture, how it actually works in the code, what it's good for, and where it hurts. Flick through the tabs. The recommendation leans one way, but every option is laid out in full so the call is yours.</p>
+  </div>
+
+  <div class="tabbar">
+    <div class="tabs">
+      <div class="tab active" data-tab="overview">Overview</div>
+      <div class="tab" data-tab="a"><span class="t-let">A</span>Stay Separate</div>
+      <div class="tab" data-tab="b"><span class="t-let">B</span>Bridge</div>
+      <div class="tab" data-tab="c"><span class="t-let">C</span>Unify</div>
+      <div class="tab" data-tab="rec">Recommendation</div>
     </div>
   </div>
 
-  <!-- 1. FINDING -->
-  <section id="finding">
-    <div class="sec-num">01 · The finding</div>
-    <h2 class="sec-title">They aren't two versions of the same thing. They're the two halves of one company.</h2>
-    <p class="sec-intro">HealthPilot generates and qualifies demand. The White-Label fulfils it. There is almost no feature overlap — which is exactly why the question "integrate or separate" is worth answering properly rather than by reflex.</p>
+  <!-- ===================== OVERVIEW ===================== -->
+  <div class="panel active" id="overview">
+    <h2 class="sec">The two products are opposite halves of one company</h2>
+    <p class="sec-sub">HealthPilot generates and qualifies demand. The White-Label fulfils it. There's almost no feature overlap, which is exactly why "integrate or separate" deserves a real answer rather than a reflex.</p>
 
     <div class="halves">
       <div class="half hp">
         <span class="pill hp">HealthPilot</span>
-        <h3>The funnel 🔎</h3>
-        <div class="role">Demand side · finds &amp; qualifies</div>
+        <h4>The funnel 🔎</h4><div class="role">Demand side · finds &amp; qualifies</div>
         <div class="flow">
           <div class="step"><span class="n">1</span> Anonymous visitor, no login</div>
           <div class="step"><span class="n">2</span> AI health intake + optional bloods</div>
           <div class="step"><span class="n">3</span> AI matches &amp; scores treatments</div>
           <div class="step"><span class="n">4</span> Links the user out to a provider's website</div>
         </div>
-        <div class="has"><h4>Genuinely good at</h4>
-          <div class="tags">
-            <span class="tag yes">AI intake / triage</span>
-            <span class="tag yes">Match scoring</span>
-            <span class="tag yes">Blood interpretation</span>
-            <span class="tag yes">Zero-friction top of funnel</span>
-          </div>
-        </div>
-        <div class="hasnt"><h4>Does NOT do</h4>
-          <div class="tags">
-            <span class="tag no">Payments</span>
-            <span class="tag no">Consults</span>
-            <span class="tag no">Prescribing</span>
-            <span class="tag no">Pharmacy</span>
-            <span class="tag no">White-label branding</span>
-          </div>
-        </div>
+        <div class="mini-h">Good at</div>
+        <div class="tags"><span class="tag yes">AI intake / triage</span><span class="tag yes">Match scoring</span><span class="tag yes">Blood interpretation</span><span class="tag yes">Cold-traffic entry</span></div>
+        <div class="mini-h">Does NOT do</div>
+        <div class="tags"><span class="tag no">Payments</span><span class="tag no">Consults</span><span class="tag no">Prescribing</span><span class="tag no">Pharmacy</span><span class="tag no">White-label</span></div>
       </div>
-
       <div class="vs"><span>vs</span></div>
-
       <div class="half wl">
         <span class="pill wl">Ted's Health WL</span>
-        <h3>The clinic 🏥</h3>
-        <div class="role">Supply side · treats &amp; bills</div>
+        <h4>The clinic 🏥</h4><div class="role">Supply side · treats &amp; bills</div>
         <div class="flow">
           <div class="step"><span class="n">1</span> Logged-in patient (Firebase account)</div>
           <div class="step"><span class="n">2</span> TRT / ED pathway + blood tests</div>
-          <div class="step"><span class="n">3</span> Video consult → prescription → pharmacy</div>
+          <div class="step"><span class="n">3</span> Consult → prescription → pharmacy</div>
           <div class="step"><span class="n">4</span> Takes payment + pays the clinic out</div>
         </div>
-        <div class="has"><h4>Genuinely good at</h4>
-          <div class="tags">
-            <span class="tag yes">Clinical pathways</span>
-            <span class="tag yes">Payments (Ryft)</span>
-            <span class="tag yes">Prescribing</span>
-            <span class="tag yes">CQC audit</span>
-            <span class="tag yes">Multi-tenant clinics</span>
-          </div>
-        </div>
-        <div class="hasnt"><h4>Does NOT do</h4>
-          <div class="tags">
-            <span class="tag no">Discovery</span>
-            <span class="tag no">Cold-visitor intake</span>
-            <span class="tag no">AI triage / matching</span>
-          </div>
-        </div>
+        <div class="mini-h">Good at</div>
+        <div class="tags"><span class="tag yes">Clinical pathways</span><span class="tag yes">Payments (Ryft)</span><span class="tag yes">Prescribing</span><span class="tag yes">CQC audit</span><span class="tag yes">Multi-tenant clinics</span></div>
+        <div class="mini-h">Does NOT do</div>
+        <div class="tags"><span class="tag no">Discovery</span><span class="tag no">Cold-visitor intake</span><span class="tag no">AI triage / matching</span></div>
       </div>
     </div>
     <div class="takeaway">HealthPilot has a funnel and no clinic. The White-Label has a clinic and <b>no funnel at all</b>. Each is the missing half of the other.</div>
-  </section>
 
-  <!-- 2. VERDICT -->
-  <section id="verdict">
-    <div class="verdict">
-      <span class="one">The committed answer</span>
-      <h2>Long-term, these become <span class="hl">one platform</span> — permanently.</h2>
-      <p>Not two services joined by a bridge. Not two services kept apart. HealthPilot's discovery and triage engine becomes the permanent top of the White-Label funnel, and HealthPilot as a standalone product stops existing. One patient, one record, one journey, white-labelled per clinic.</p>
+    <div class="today"><b>Where it stands today:</b> nothing connects them. HealthPilot's "handoff" is a redirect — on its provider page it opens a confirm dialog and links the visitor out to the provider's website (<code>provider-detail/page.tsx</code>). No data crosses, no record is created, and HealthPilot's webhook code sits dormant. So the starting point is effectively Option A already.</div>
+
+    <h3 class="blk"><span class="ic">⚖️</span> The three architectures at a glance</h3>
+    <table class="matrix">
+      <thead><tr><th>Dimension</th><th class="c-a">A · Separate</th><th class="c-b">B · Bridge</th><th class="c-c">C · Unify</th></tr></thead>
+      <tbody>
+        <tr><td>Build effort</td><td><span class="dot-good">None</span> (status quo)</td><td><span class="dot-mid">Moderate</span> (weeks)</td><td><span class="dot-bad">Large</span> (months)</td></tr>
+        <tr><td>Patient identity</td><td>Two separate records</td><td>Two records, linked by attribution</td><td><span class="dot-good">One record, end to end</span></td></tr>
+        <tr><td>Acquisition for the clinic</td><td><span class="dot-bad">None</span></td><td>HP leads, with data</td><td><span class="dot-good">Native funnel, all clinics</span></td></tr>
+        <tr><td>Revenue captured</td><td>Referral fee at best</td><td>Treatment margin, minus a seam</td><td><span class="dot-good">Full treatment margin</span></td></tr>
+        <tr><td>Maintenance burden</td><td>Two half-products</td><td><span class="dot-bad">Permanent seam</span></td><td>One platform</td></tr>
+        <tr><td>Keeps HP as its own brand</td><td>Yes</td><td>Yes</td><td>No (absorbed)</td></tr>
+        <tr><td>Supports neutral marketplace</td><td>Yes</td><td>Yes</td><td><span class="dot-bad">No</span></td></tr>
+      </tbody>
+    </table>
+    <p class="navhint">→ Open each tab for the full architecture, pros, cons, and what it would take to build.</p>
+  </div>
+
+  <!-- ===================== OPTION A ===================== -->
+  <div class="panel a" id="a">
+    <div class="opt-head">
+      <div class="opt-badge">A</div>
+      <div><h2>Stay Separate</h2><div class="tline">Two independent products that never talk to each other. The current reality, made deliberate.</div></div>
     </div>
-  </section>
+    <div class="badges">
+      <span class="bdg effort-zero">● Build effort: none</span>
+      <span class="bdg neutral">Fully reversible</span>
+      <span class="bdg neutral">Zero coupling risk</span>
+    </div>
 
-  <!-- 3. THREE SHAPES -->
-  <section id="shapes">
-    <div class="sec-num">03 · The architectures considered</div>
-    <h2 class="sec-title">There are only three shapes this can take. Two of them are wrong.</h2>
-    <p class="sec-intro">Stating all three openly is the point — the verdict isn't a preference, it's what's left standing once the alternatives are followed to their consequences.</p>
+    <div class="usecase">
+      <h3>When this is the right answer</h3>
+      <p>When HealthPilot is either a genuine standalone consumer-wellness brand with its own audience, or it's being parked. In both cases you accept the two systems don't share patients. This is also the correct holding position while the White-Label gets to its first live clinic, since it costs nothing.</p>
+    </div>
 
-    <div class="shapes">
-      <div class="shape lose">
-        <span class="verdict-tag">Rejected</span>
-        <h4>A · Stay separate</h4>
-        <div class="what">Two independent products that never talk. Each does its own thing forever.</div>
-        <div class="mini">
-          <span class="chip hp">HealthPilot</span>
-          <span class="gap">|</span>
-          <span class="chip wl">White-Label</span>
+    <h3 class="blk"><span class="ic">🧩</span> How it works, fundamentally</h3>
+    <p class="sec-sub" style="margin-bottom:14px">Two fully separate stacks with no shared data, auth, or identity. A person who appears in both is simply two unrelated accounts.</p>
+    <div class="arch">
+      <div class="diag">
+        <div class="diag-frame hp" style="flex:1">
+          <span class="fl">HealthPilot stack</span>
+          <div class="dn hp">Express + Prisma<small>own Postgres · JWT auth · OpenAI</small></div>
+          <div class="da">→</div>
+          <div class="dn ghost">Redirect out<small>links to a provider website, no data</small></div>
         </div>
-        <ul>
-          <li>Leaks the most valuable asset: the patient relationship</li>
-          <li>The clinic keeps its single biggest gap — no acquisition layer</li>
-          <li>Demand is created, then handed to whoever, for a thin referral fee</li>
-        </ul>
-      </div>
-
-      <div class="shape lose">
-        <span class="verdict-tag">Rejected</span>
-        <h4>B · Bridge them</h4>
-        <div class="what">Keep both products, wire a permanent handoff between them.</div>
-        <div class="mini">
-          <span class="chip hp">HealthPilot</span>
-          <span class="brk">⇄</span>
-          <span class="chip wl">White-Label</span>
+        <div class="da" style="flex:0 0 60px">✕<small>no link</small></div>
+        <div class="diag-frame wl" style="flex:1">
+          <span class="fl">White-Label stack</span>
+          <div class="dn wl">NestJS + Medusa<small>own Postgres · Firebase · Ryft · Railway</small></div>
+          <div class="da">→</div>
+          <div class="dn wl">Patient signs up fresh<small>trt-diagnosis / ed-onboarding</small></div>
         </div>
-        <ul>
-          <li>A permanent seam: two records, two logins, constant PHI reconciliation</li>
-          <li>Maintenance liability that never goes away</li>
-          <li>Worst of both — the "for now" fix that quietly becomes forever</li>
-        </ul>
       </div>
+      <div class="legend">
+        <span><span class="lg-box" style="background:var(--hp-soft);border-color:var(--hp-line)"></span> HealthPilot</span>
+        <span><span class="lg-box" style="background:var(--wl-soft);border-color:var(--wl-line)"></span> White-Label</span>
+        <span><span class="lg-box" style="background:#f8fafc;border-color:var(--line)"></span> dead-ends / no data</span>
+      </div>
+    </div>
+    <ol class="howto">
+      <li>A HealthPilot visitor completes intake and is shown matches. If one is a men's-health treatment, they get a <b>link to the clinic's website</b> and nothing more.</li>
+      <li>They arrive at the clinic as a <b>brand-new visitor</b> and start the White-Label flow from scratch: create a Firebase account, re-enter everything, redo any bloods.</li>
+      <li>The two systems <b>never know it's the same person.</b> No token, no shared record, no attribution.</li>
+    </ol>
 
-      <div class="shape win">
-        <span class="verdict-tag">★ The answer</span>
-        <h4>C · One platform</h4>
-        <div class="what">HealthPilot's brain lives inside the White-Label. One system, end to end.</div>
-        <div class="mini">
-          <span class="chip uni">Discovery → Triage → Treat → Manage</span>
+    <div class="grounded">
+      <h4>Grounded in the code</h4>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">HP handoff is a redirect: <code>handleSelectProvider()</code> → confirm dialog → <code>providerWebsiteUrl</code></span></div>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">WL signup is standalone: <code>createAuthUser()</code> + Patient row, no external entry point</span></div>
+      <div class="gline"><span class="gk newp">to build</span><span class="gtxt">Nothing. This is the status quo.</span></div>
+    </div>
+
+    <div class="pc">
+      <div class="box pro"><h4>Pros</h4><ul>
+        <li>Zero integration work and zero new failure surface</li>
+        <li>Each product can pivot or be sold independently</li>
+        <li>No PHI flows between systems — simplest compliance posture</li>
+        <li>If HealthPilot is parked, this is the honest, free status quo</li>
+      </ul></div>
+      <div class="box con"><h4>Cons</h4><ul>
+        <li>The clinic keeps its single biggest gap: no acquisition funnel</li>
+        <li>Demand HealthPilot creates is lost, or handed to a competitor for nothing</li>
+        <li>Double registration — same human, two records, painful if they ever cross</li>
+        <li>You run two products that each do half a job, forever</li>
+      </ul></div>
+    </div>
+
+    <div class="build"><h4>What it would take to build</h4>
+      <div class="brow"><span class="bside fe">Nothing</span><span>It is the current architecture. The only "cost" is the opportunity cost of an unfilled funnel.</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== OPTION B ===================== -->
+  <div class="panel b" id="b">
+    <div class="opt-head">
+      <div class="opt-badge">B</div>
+      <div><h2>Bridge</h2><div class="tline">Keep both products, connect them with a one-way handoff so HealthPilot's leads reach the clinic with their data attached.</div></div>
+    </div>
+    <div class="badges">
+      <span class="bdg effort-mid">● Build effort: moderate (weeks)</span>
+      <span class="bdg neutral">Reversible (it's integration, not a merge)</span>
+      <span class="bdg neutral">Keeps HP as its own brand</span>
+    </div>
+
+    <div class="usecase">
+      <h3>When this is the right answer</h3>
+      <p>When HealthPilot stays a live, independently-branded funnel and the clinic is one destination it routes men's-health traffic to. This is the only shape that supports a genuine <b>multi-provider marketplace</b> (HealthPilot listing Ted's alongside other, even non-BGV, providers) while still getting qualified leads into the clinic.</p>
+    </div>
+
+    <h3 class="blk"><span class="ic">🧩</span> How it works, fundamentally</h3>
+    <p class="sec-sub" style="margin-bottom:14px">A signed handoff carries the patient — and optionally their data — from HealthPilot into a White-Label clinic, where a real patient record is created and they're auto-logged-in. There are two depths.</p>
+
+    <div class="arch">
+      <div class="diag">
+        <div class="diag-frame hp">
+          <span class="fl">HealthPilot</span>
+          <div class="dn hp">Intake + match<small>anonymous</small></div>
+          <div class="da">→</div>
+          <div class="dn hp new">Export / webhook<small>signed token + data</small></div>
         </div>
-        <ul>
-          <li>One patient identity from first anonymous touch to lifetime care</li>
-          <li>Demand feeds your own fulfilment — full margin captured</li>
-          <li>No seam to maintain, ever. Built once, correctly.</li>
-        </ul>
-      </div>
-    </div>
-  </section>
-
-  <!-- 4. WHY -->
-  <section id="why">
-    <div class="sec-num">04 · The reasoning</div>
-    <h2 class="sec-title">Four forces, all pointing the same way</h2>
-    <p class="sec-intro">Any one of these is a strong argument. Together they make permanent separation, or a permanent bridge, the wrong long-term bet.</p>
-
-    <div class="pillars">
-      <div class="pillar">
-        <div class="pnum">1</div>
-        <h4>The economics only point one way</h4>
-        <p>Clinical fulfilment earns treatment margin — TRT is a recurring subscription with lifetime value measured in years. A referral marketplace earns thin, one-time commission.</p>
-        <p>The value in a men's-health business is in owning the patient relationship and the treatment, not in selling a click. Demand generation should feed your own fulfilment, never hand it onward.</p>
-        <div class="punch">A bridge that passes patients to a separate system leaks the single most valuable thing you have.</div>
-      </div>
-
-      <div class="pillar">
-        <div class="pnum">2</div>
-        <h4>A captive marketplace is structurally fake</h4>
-        <p>An independent marketplace only works if it neutrally lists many providers — including your competitors. But BGV owns the clinic, so the matcher will always favour it.</p>
-        <p>Competitors notice, and leave. You're left with a "marketplace" of one. The honest version of that product is simply "BGV's front door."</p>
-        <div class="punch">If it's really your own funnel, it belongs inside the platform — not standing beside it pretending to be neutral.</div>
-      </div>
-
-      <div class="pillar">
-        <div class="pnum">3</div>
-        <h4>"Perfect long-term" means one record, no seam</h4>
-        <p>The patient journey is one arc: anonymous first touch → triage → becoming a patient → years of treatment. The correct data architecture is a single identity across all of it.</p>
-        <p>Two services means a bridge forever: duplicated patients, ongoing PHI sync, a permanent reconciliation surface and a permanent place for things to break.</p>
-        <div class="punch">A seam you maintain forever is the definition of a thing that works short-term and rots. The end-state has no seam.</div>
-      </div>
-
-      <div class="pillar">
-        <div class="pnum">4</div>
-        <h4>The generic-vs-specific gap resolves by specialising</h4>
-        <p>HealthPilot is wellness-generic (gut, sleep, energy, weight). The White-Label is men's-health-specific (TRT + ED). Bridged forever, most of HealthPilot's funnel spills nowhere.</p>
-        <p>Absorbed, you keep the mechanism — anonymous AI intake, matching, blood interpretation — and aim all of it at men's health.</p>
-        <div class="punch">The funnel and the drain finally match. The wide net becomes a focused one.</div>
-      </div>
-    </div>
-  </section>
-
-  <!-- 5. END STATE -->
-  <section id="endstate">
-    <div class="sec-num">05 · The end-state</div>
-    <h2 class="sec-title">What the one platform actually is</h2>
-    <p class="sec-intro">A single full-stack men's-health platform: a cold visitor is triaged, converted, treated and managed for life inside one system — white-labelled for each clinic. The colours show where each capability originates.</p>
-
-    <div class="pipe">
-      <div class="brand-frame">
-        <span class="flabel">One clinic brand · one patient record</span>
-        <div class="pipeline">
-          <div class="pnode from-hp">
-            <span class="tag2">from HealthPilot</span>
-            <h5>Anonymous triage</h5>
-            <small>AI intake, no login, soft entry for cold traffic</small>
-          </div>
-          <div class="parrow">→</div>
-          <div class="pnode from-hp">
-            <span class="tag2">from HealthPilot</span>
-            <h5>Match &amp; interpret</h5>
-            <small>Scores eligibility, reads bloods, recommends a pathway</small>
-          </div>
-          <div class="parrow">→</div>
-          <div class="pnode from-wl">
-            <span class="tag2">from White-Label</span>
-            <h5>Become a patient</h5>
-            <small>Seamless conversion — same record, no second signup</small>
-          </div>
-          <div class="parrow">→</div>
-          <div class="pnode from-wl">
-            <span class="tag2">from White-Label</span>
-            <h5>Treat</h5>
-            <small>Consult, prescribe, pharmacy, take payment, pay clinic out</small>
-          </div>
-          <div class="parrow">→</div>
-          <div class="pnode from-wl">
-            <span class="tag2">from White-Label</span>
-            <h5>Manage for life</h5>
-            <small>Renewals, bloods, dose changes — recurring revenue</small>
-          </div>
+        <div class="da">→<small>HTTPS<br>signed</small></div>
+        <div class="diag-frame wl">
+          <span class="fl">White-Label clinic</span>
+          <div class="dn wl new">POST /platform/handoff<small>mirrors Ryft webhook</small></div>
+          <div class="da">→</div>
+          <div class="dn wl">Create patient<small>Firebase + Patient + EXTERNAL bloods</small></div>
+          <div class="da">→</div>
+          <div class="dn wl">/from/healthpilot<small>custom-token auto-login</small></div>
         </div>
-        <div class="thread"><span>One identity threads the entire journey — first click to lifetime care</span></div>
+      </div>
+      <div class="legend">
+        <span><span class="lg-box" style="background:var(--hp-soft);border-color:var(--hp-line)"></span> HealthPilot</span>
+        <span><span class="lg-box" style="background:var(--wl-soft);border-color:var(--wl-line)"></span> White-Label</span>
+        <span><span class="lg-box" style="background:#fff;border-color:var(--bad)"></span> new build</span>
       </div>
     </div>
-  </section>
 
-  <!-- 6. KEEP / DROP -->
-  <section id="keepdrop">
-    <div class="sec-num">06 · What carries forward</div>
-    <h2 class="sec-title">Keep HealthPilot's brain. Drop its marketplace.</h2>
-    <p class="sec-intro">Absorbing HealthPilot does not mean carrying all of it. The valuable part is the acquisition engine. The marketplace half is a different, weaker business that conflicts with the core — it does not come along.</p>
+    <h3 class="blk" style="font-size:15px"><span class="ic">▸</span> The deeper variant (B2 — full data handoff), step by step</h3>
+    <ol class="howto">
+      <li>Anonymous HealthPilot user finishes intake + bloods; AI matches a men's-health pathway and they choose the clinic.</li>
+      <li><b>HealthPilot fires the handoff</b> — the genuinely new HP-side piece. It either pushes its dormant <code>ProviderWebhook</code> with a signed payload, or exposes a one-time <code>GET /platform/export?token=…</code> the clinic can pull from. Today HP has neither; its handoff only redirects.</li>
+      <li><b>The clinic receives it</b> at a new <code>POST /platform/handoff</code> that mirrors the existing Ryft webhook receiver exactly: public route, HMAC-verify the raw body, <code>idempotency.recordIfNew</code>, then act.</li>
+      <li><b>The clinic creates the patient</b> with existing primitives: <code>createAuthUser()</code> (Firebase) + a Patient row + <code>setClinicClaims(uid, clinicId)</code>, and stamps <code>attributionSource = 'healthpilot'</code> (two new columns).</li>
+      <li><b>Bloods land as <code>BloodTest(sourceType = EXTERNAL)</code></b> with <code>ifLogicOutcome</code> set — the verified gate that lets a clinician later skip CBT.</li>
+      <li><b>Auto-login reuses WL's existing handoff token</b>: mint a Firebase custom token (<code>createCustomToken</code>), redirect to <code>/from/healthpilot</code> on the clinic domain, exchange via <code>signInWithCustomToken</code>. WL already does precisely this for its internal clinic handoff.</li>
+      <li><b>Optional reverse webhook</b>: on first paid invoice, the clinic posts <code>patient.converted</code> back to HealthPilot, which writes an <code>AttributionEvent</code> for revenue tracking.</li>
+    </ol>
 
-    <div class="kd">
-      <div class="box keep">
-        <h4>✓ Keep — the acquisition engine</h4>
-        <div class="sub">This is what the White-Label completely lacks today.</div>
-        <ul>
-          <li>Anonymous AI intake / triage<b>The soft front door for cold traffic the clinic has never had</b></li>
-          <li>Matching &amp; eligibility scoring<b>Routes a visitor to the right pathway automatically</b></li>
-          <li>Blood interpretation<b>Imported results can enable a clinician to skip CBT</b></li>
-          <li>Customisable intake-flow concept<b>Per-clinic questionnaires without rebuilding UI each time</b></li>
-        </ul>
+    <div class="today" style="background:#eff6ff;border-color:#bfdbfe;border-left-color:var(--wl-line)">
+      <b style="color:var(--wl)">Two honest caveats.</b> &nbsp;<b>Identity:</b> HP uses JWT, WL uses Firebase — there's no shared session, so the bridge mints a fresh Firebase identity at handoff. The patient is still a <i>separate</i> record in WL, linked by attribution, not unified. &nbsp;<b>Commission:</b> HealthPilot can't enforce it because no money flows through it; settlement is internal BGV rev-share, with the reverse webhook as the data source.
+    </div>
+
+    <div class="grounded">
+      <h4>Grounded in the code</h4>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">WL inbound-webhook pattern: Ryft <code>@PublicRoute @Post('webhook')</code> → HMAC verify → <code>idempotency.recordIfNew</code></span></div>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">WL auto-login: <code>clinic-handoff-token</code> → <code>createCustomToken</code> → <code>signInWithCustomToken</code></span></div>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">WL patient creation: <code>createAuthUser</code> + Patient row + <code>setClinicClaims</code></span></div>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">Skip-CBT gate accepts <code>sourceType === 'EXTERNAL'</code> (trt-pathway.types.ts)</span></div>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">HP already models <code>ProviderHandoff</code>, <code>ProviderWebhook</code>, <code>AttributionEvent</code> (dormant)</span></div>
+      <div class="gline"><span class="gk newp">to build</span><span class="gtxt">HP: a real export endpoint or wire the dormant webhook (needs Arief's buy-in)</span></div>
+      <div class="gline"><span class="gk newp">to build</span><span class="gtxt">WL: <code>POST /platform/handoff</code>, <code>/from/healthpilot</code> page, 2 attribution columns, HP→WL intake/blood mapping</span></div>
+    </div>
+
+    <div class="pc">
+      <div class="box pro"><h4>Pros</h4><ul>
+        <li>Reuses a lot that already exists in WL (webhook receiver, custom-token login, EXTERNAL bloods → skip-CBT)</li>
+        <li>Preserves HealthPilot as its own brand and the multi-provider vision</li>
+        <li>The clinic finally gets leads <i>with data</i>, enabling the skip-CBT fast path</li>
+        <li>Reversible — it's an integration, not a merge; can be switched off</li>
+      </ul></div>
+      <div class="box con"><h4>Cons</h4><ul>
+        <li>A permanent seam: two DBs, two identities, ongoing PHI reconciliation</li>
+        <li>Needs a real HP-side change to export data — and HP is read-only / Arief won't take big changes</li>
+        <li>Double identity persists; the link is attribution, not one record</li>
+        <li>Generic-vs-specific mismatch remains — most of HP's funnel still has nowhere to go</li>
+        <li>Commission can't be enforced; relies on internal settlement + a reliable reverse webhook</li>
+      </ul></div>
+    </div>
+
+    <div class="build"><h4>What it would take to build</h4>
+      <div class="brow"><span class="bside hp">HealthPilot</span><span>One export endpoint (or wire the dormant signed webhook). Small but real, and needs Arief's sign-off.</span></div>
+      <div class="brow"><span class="bside wl">White-Label</span><span><code>POST /platform/handoff</code> (mirror Ryft) + <code>/from/healthpilot</code> (reuse custom-token) + 2 attribution columns + map HP intake → WL intake and HP bloods → <code>BloodTest(EXTERNAL)</code>.</span></div>
+      <div class="brow"><span class="bside fe">Effort</span><span>Mostly assembly of parts that already exist. Weeks, not months. Most of the risk is the HP-side change and maintaining the seam afterwards.</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== OPTION C ===================== -->
+  <div class="panel c" id="c">
+    <div class="opt-head">
+      <div class="opt-badge">C</div>
+      <div><h2>Unify</h2><div class="tline">Absorb HealthPilot's discovery brain into the White-Label. One platform, one patient identity, first click to lifetime care.</div></div>
+    </div>
+    <div class="badges">
+      <span class="bdg effort-high">● Build effort: large (months)</span>
+      <span class="bdg neutral">Every piece is permanent</span>
+      <span class="bdg neutral">HP-the-product retired</span>
+    </div>
+
+    <div class="usecase">
+      <h3>When this is the right answer</h3>
+      <p>When HealthPilot is really BGV's own funnel rather than a neutral marketplace, and you want to own the men's-health vertical end to end. The deciding test: does HealthPilot ever send patients to companies that aren't BGV's? If no, this is the destination.</p>
+    </div>
+
+    <h3 class="blk"><span class="ic">🧩</span> How it works, fundamentally</h3>
+    <p class="sec-sub" style="margin-bottom:14px">HealthPilot's valuable mechanisms are rebuilt as new domains inside the White-Label monorepo (it's read-only, so "absorb" means reimplement the good parts, not merge repos). The funnel and the clinic become one continuous system.</p>
+
+    <div class="arch">
+      <div class="diag-frame uni">
+        <span class="fl">One platform · one patient record · white-labelled per clinic</span>
+        <div class="dn uni new">Anonymous triage<small>AI intake, no login</small></div>
+        <div class="da">→</div>
+        <div class="dn uni new">Match + interpret<small>routes to pathway, reads bloods</small></div>
+        <div class="da">→</div>
+        <div class="dn wl">Become a patient<small>same record, no re-entry</small></div>
+        <div class="da">→</div>
+        <div class="dn wl">Treat<small>consult · prescribe · pay</small></div>
+        <div class="da">→</div>
+        <div class="dn wl">Manage for life<small>renewals · recurring revenue</small></div>
       </div>
-      <div class="box drop">
-        <h4>✕ Drop — the marketplace half</h4>
-        <div class="sub">A neutral-marketplace business that competes with your own clinic.</div>
-        <ul>
-          <li>Listing third-party / competitor providers<b>Conflicts directly with owning the patient</b></li>
-          <li>Provider ratings &amp; benchmarking<b>Only matters when you're a neutral broker</b></li>
-          <li>Supplement affiliate links<b>Thin commission, off-strategy for a clinic</b></li>
-          <li>Redirect-out handoff<b>Replaced by in-platform conversion — no leak</b></li>
-        </ul>
+      <div class="legend">
+        <span><span class="lg-box" style="background:linear-gradient(135deg,var(--hp-soft),var(--uni-soft));border-color:var(--uni-line)"></span> new module (HP concepts, rebuilt)</span>
+        <span><span class="lg-box" style="background:var(--wl-soft);border-color:var(--wl-line)"></span> existing White-Label</span>
+        <span><span class="lg-box" style="background:#fff;border-color:var(--bad)"></span> new build</span>
       </div>
     </div>
-  </section>
 
-  <!-- 7. DECISION -->
-  <section id="decision">
+    <ol class="howto">
+      <li><b>A cold visitor</b> hits a clinic domain and does anonymous AI triage — a new WL module. No login required.</li>
+      <li><b>Matching routes them</b> to the right pathway (trt-diagnosis / ed-onboarding / a one-off product) and interprets any uploaded bloods up front.</li>
+      <li><b>On "start treatment,"</b> WL converts the anonymous lead into a real patient using its existing signup primitives — the intake is carried over, <b>no re-entry, same record.</b></li>
+      <li><b>From there it's the existing machine:</b> consult → prescribe → pharmacy → payment → lifetime management, all in one system under one clinic brand.</li>
+    </ol>
+
+    <div class="today" style="background:#faf5ff;border-color:var(--uni-line);border-left-color:var(--uni)">
+      <b style="color:var(--uni-deep)">The genuinely hard part.</b> The White-Label has <i>no anonymous state today</i> — <code>Patient.uid</code> is the Firebase uid, so a patient only exists after login. Unify needs a new anonymous "pre-patient" layer (a Lead / pre-intake record linked to the Patient on conversion), mirroring HealthPilot's <code>/auth/anonymous</code> + <code>link-anonymous-intake</code>. That's the most novel piece, plus a PHI-at-rest posture for pre-patient data.
+    </div>
+
+    <div class="grounded">
+      <h4>Grounded in the code</h4>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">WL conversion primitives: <code>createAuthUser</code> + Patient row + <code>setClinicClaims</code></span></div>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">WL already multi-tenant (<code>Clinic</code> branding/domain) → funnel ships to every clinic</span></div>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">WL pathways + one-off products to route into (trt-diagnosis, ed-onboarding, TBT/Wellman)</span></div>
+      <div class="gline"><span class="gk exist">exists</span><span class="gtxt">HP reference designs: <code>IntakeFlow</code>, matching rules, <code>BloodTestInterpretation</code>, anonymous auth</span></div>
+      <div class="gline"><span class="gk newp">to build</span><span class="gtxt">WL anonymous pre-patient/lead model + anonymous→patient conversion</span></div>
+      <div class="gline"><span class="gk newp">to build</span><span class="gtxt">WL triage/intake-flow engine + men's-health matching + blood interpretation</span></div>
+      <div class="gline"><span class="gk newp">to build</span><span class="gtxt">Frontend anonymous triage flow + PHI encryption for pre-patient data</span></div>
+    </div>
+
+    <div class="pc">
+      <div class="box pro"><h4>Pros</h4><ul>
+        <li>One patient record, first click to lifetime care — no seam, ever</li>
+        <li>Demand feeds your own fulfilment → full treatment margin captured</li>
+        <li>WL is already multi-tenant, so every clinic gets the funnel for free</li>
+        <li>The funnel is finally men's-health-specific — no spillage</li>
+        <li>Strategically clean: no captive-marketplace conflict of interest</li>
+      </ul></div>
+      <div class="box con"><h4>Cons</h4><ul>
+        <li>The biggest build of the three — new anonymous layer + rebuilt triage/matching</li>
+        <li>You retire HP-the-product (use ~30% of it); real sacrifice if it has traction</li>
+        <li>New PHI-at-rest surface in WL for anonymous intake — folds into the readiness audit</li>
+        <li>Requires the strategic commitment that HP is not a neutral marketplace</li>
+      </ul></div>
+    </div>
+
+    <div class="build"><h4>What it would take to build</h4>
+      <div class="brow"><span class="bside wl">Backend</span><span>New WL domains: anonymous lead / pre-intake, triage + intake-flow engine, men's-health matching, blood interpretation, anonymous→patient conversion.</span></div>
+      <div class="brow"><span class="bside fe">Frontend</span><span>An anonymous triage flow prepended to the clinic site, funnelling into the existing trt-diagnosis / ed-onboarding routes.</span></div>
+      <div class="brow"><span class="bside wl">Compliance</span><span>Encryption posture for pre-patient PHI to match HealthPilot's standard.</span></div>
+      <div class="brow"><span class="bside fe">Effort</span><span>Largest of the three — months. But nothing is throwaway: every piece is a permanent part of the final platform.</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== RECOMMENDATION ===================== -->
+  <div class="panel rec" id="rec">
+    <div class="rec-hero">
+      <div class="lean">Where the analysis leans</div>
+      <h2>Toward <span class="hl">C · Unify</span> — if the strategy supports it</h2>
+      <p>All three are real, and A or B is genuinely correct under the right conditions. But for a business whose value lives in owning the men's-health patient relationship, one platform is the only end-state with no permanent seam and full margin capture. The lean is to C, with eyes open about what makes A or B right instead.</p>
+    </div>
+
+    <h3 class="blk"><span class="ic">🎯</span> When each option actually wins</h3>
+    <div class="when">
+      <div class="w a">
+        <div class="lab">A · Separate wins if…</div>
+        <p>HealthPilot is being parked, or it's a standalone wellness brand you don't want entangled with the clinic. Costs nothing, commits to nothing.</p>
+        <span class="pick">Holding position</span>
+      </div>
+      <div class="w b">
+        <div class="lab">B · Bridge wins if…</div>
+        <p>HealthPilot must stay a live, neutral, multi-provider marketplace (including non-BGV providers) and you still want its leads in the clinic, with data.</p>
+        <span class="pick">Marketplace play</span>
+      </div>
+      <div class="w c">
+        <div class="lab">C · Unify wins if…</div>
+        <p>HealthPilot is really BGV's own funnel and you want to own men's health end to end: one record, full margin, every clinic gets a funnel.</p>
+        <span class="pick">The lean</span>
+      </div>
+    </div>
+
     <div class="decision">
-      <span class="one">The single decision that changes the destination</span>
-      <h3>One question decides this — and it's yours, not the code's.</h3>
+      <h3>The one decision that picks between B and C</h3>
       <p class="q">Is HealthPilot ever meant to send patients to companies that aren't BGV's?</p>
       <div class="branches">
         <div class="branch primary">
           <div class="if">If NO → (the expected answer)</div>
-          <div class="then"><b>One platform, full stop.</b> Absorb the acquisition engine into the White-Label and own the men's-health vertical end to end.</div>
+          <div class="then"><b>C · Unify.</b> Absorb the acquisition engine into the White-Label and own the vertical end to end.</div>
         </div>
         <div class="branch">
-          <div class="if">If YES → the only world where separate is right</div>
-          <div class="then">Then HealthPilot is a <b>distinct business line</b> — a neutral wellness marketplace — staffed and capitalised as its own company, knowingly sending leads to competitors for referral fees.</div>
+          <div class="if">If YES → the only world where B/A is right</div>
+          <div class="then"><b>B · Bridge</b> (or A). HealthPilot stays a distinct, neutral marketplace business, staffed and capitalised as its own company.</div>
         </div>
       </div>
     </div>
 
     <div class="principle">
-      <span class="ic">🧭</span>
-      <p><b>This document commits to the permanent end-state.</b> It deliberately does not propose a throwaway "do this for now" bridge. We design the architecture that works long-term and perfectly, then build real pieces of it in a sound order — nothing disposable.</p>
+      <span class="ic2">🧭</span>
+      <p><b>However we sequence it, we build for the permanent end-state.</b> If the answer is C, we don't build B first as a throwaway bridge — we build the real, permanent pieces of C in a sound order. The right architecture, made to last, not a short-term fix that has to be ripped out later.</p>
     </div>
-  </section>
+  </div>
 
   <footer>Built from a direct read of both codebases · health-pilot-{backend,frontend,admin} &amp; bgvai/th-whitelabel · prepared for Felix</footer>
 
 </div>
+
+<script>
+  document.querySelectorAll('.tab').forEach(function(t){
+    t.addEventListener('click', function(){
+      var id = t.getAttribute('data-tab');
+      document.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});
+      document.querySelectorAll('.panel').forEach(function(p){p.classList.remove('active');});
+      t.classList.add('active');
+      document.getElementById(id).classList.add('active');
+      window.scrollTo({top:0,behavior:'smooth'});
+    });
+  });
+</script>
 </body>
 </html>
