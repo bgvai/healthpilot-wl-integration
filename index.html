@@ -160,7 +160,7 @@
             <span class="tag no">Consults</span>
             <span class="tag no">Prescribing</span>
             <span class="tag no">Pharmacy</span>
-            <span class="tag no">Multi-clinic</span>
+            <span class="tag no">White-label branding</span>
           </div>
         </div>
       </div>
@@ -235,9 +235,9 @@
           <h4>Why it works today</h4>
           <ul>
             <li>The receiving side already exists in WL</li>
-            <li>Bloods can enter via <code>sourceType = EXTERNAL</code> → triggers the skip-CBT path</li>
+            <li>Bloods can enter via <code>sourceType = EXTERNAL</code> → lets a clinician skip CBT (verified gate)</li>
             <li>WL already has an inbound webhook + idempotency layer</li>
-            <li>HealthPilot needs almost no change (respects "HP stays as-is")</li>
+            <li>No change to HealthPilot's product or UX — it stays as-is</li>
           </ul>
         </div>
         <div class="col bad">
@@ -250,7 +250,7 @@
           </ul>
         </div>
       </div>
-      <div class="codenote">Build = one inbound <code>POST /platform/handoff</code> + a <code>/from/healthpilot</code> auto-login page + 2 attribution columns on the patient. That's roughly it.</div>
+      <div class="codenote"><b>WL side (most of the work):</b> one inbound <code>POST /platform/handoff</code> + a <code>/from/healthpilot</code> auto-login page + 2 attribution columns on the patient. <br><b>HP side (small):</b> to carry the bloods (not just the user), HP exposes intake + bloods for WL to fetch via a one-time token. No UX/product change.</div>
     </div>
 
     <!-- OPTION 2 -->
@@ -316,7 +316,7 @@
 
     <div class="rec">
       <h4>My recommendation</h4>
-      <p><b>Start with Option 1 either way.</b> It's small, low-risk, reversible, and respects "HP stays as-is." It's also the first time HealthPilot would actually deliver a lead end-to-end — today its handoff is simulated and goes nowhere. Begin the bridge; let the answer to the question above tell us whether it's the destination or a stepping stone.</p>
+      <p><b>Start with Option 1 either way.</b> It's small, low-risk, reversible, and respects "HP stays as-is." It would also be the first time a HealthPilot lead arrives at the clinic with their data attached — today HP just links the user out to a provider's website, carrying no intake or blood data, and its handoff/webhook code sits dormant. Begin the bridge; let the answer to the question above tell us whether it's the destination or a stepping stone.</p>
     </div>
   </section>
 
