@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HealthPilot × Ted's Health WL — Integration Options</title>
+<style>
+  :root{
+    --hp:#0d9488;        /* HealthPilot teal */
+    --hp-soft:#ccfbf1;
+    --hp-line:#5eead4;
+    --wl:#1a365d;        /* Ted's WL navy */
+    --wl-soft:#dbe4f0;
+    --wl-line:#3182ce;
+    --ink:#0f172a;
+    --muted:#64748b;
+    --bg:#f1f5f9;
+    --card:#ffffff;
+    --good:#16a34a;
+    --bad:#dc2626;
+    --warn:#d97706;
+    --line:#e2e8f0;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);line-height:1.5;
+  }
+  .wrap{max-width:1080px;margin:0 auto;padding:40px 24px 80px}
+  header.top{text-align:center;margin-bottom:8px}
+  header.top h1{font-size:30px;margin:0 0 6px;letter-spacing:-.5px}
+  header.top p{color:var(--muted);margin:0;font-size:15px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:4px 10px;border-radius:999px}
+  .pill.hp{background:var(--hp-soft);color:var(--hp)}
+  .pill.wl{background:var(--wl-soft);color:var(--wl)}
+
+  section{margin-top:48px}
+  .sec-label{font-size:13px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:var(--muted);margin-bottom:4px}
+  .sec-title{font-size:22px;font-weight:700;margin:0 0 18px;letter-spacing:-.3px}
+
+  /* ---- Section 1: the two halves ---- */
+  .halves{display:grid;grid-template-columns:1fr 56px 1fr;align-items:stretch;gap:0}
+  .half{background:var(--card);border-radius:16px;padding:24px;border:1px solid var(--line)}
+  .half.hp{border-top:5px solid var(--hp)}
+  .half.wl{border-top:5px solid var(--wl)}
+  .half h3{margin:0 0 2px;font-size:18px;display:flex;align-items:center;gap:8px}
+  .role{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:14px}
+  .flow{display:flex;flex-direction:column;gap:7px;margin:10px 0 16px}
+  .step{display:flex;align-items:center;gap:9px;font-size:14px;background:#f8fafc;border:1px solid var(--line);border-radius:9px;padding:8px 11px}
+  .step .n{flex:0 0 20px;height:20px;border-radius:50%;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+  .hp .step .n{background:var(--hp)}
+  .wl .step .n{background:var(--wl)}
+  .has h4,.hasnt h4{margin:14px 0 7px;font-size:12px;letter-spacing:.5px;text-transform:uppercase}
+  .has h4{color:var(--good)}.hasnt h4{color:var(--bad)}
+  .tags{display:flex;flex-wrap:wrap;gap:6px}
+  .tag{font-size:12px;padding:3px 9px;border-radius:7px;background:#f1f5f9;border:1px solid var(--line)}
+  .tag.no{color:var(--bad);background:#fef2f2;border-color:#fecaca;text-decoration:line-through;text-decoration-thickness:1px}
+  .tag.yes{color:var(--good);background:#f0fdf4;border-color:#bbf7d0}
+  .vs{display:flex;align-items:center;justify-content:center}
+  .vs span{background:var(--ink);color:#fff;font-size:12px;font-weight:700;width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center}
+  .funnel-note{text-align:center;color:var(--muted);font-size:14px;margin-top:16px;font-style:italic}
+
+  /* ---- Option cards ---- */
+  .opt{background:var(--card);border-radius:16px;border:1px solid var(--line);padding:26px;margin-top:18px;position:relative;overflow:hidden}
+  .opt .ribbon{position:absolute;top:18px;right:-34px;transform:rotate(45deg);background:var(--good);color:#fff;font-size:11px;font-weight:700;letter-spacing:.5px;padding:5px 44px}
+  .opt h3{margin:0 0 4px;font-size:20px}
+  .opt .sub{color:var(--muted);font-size:14px;margin:0 0 20px}
+
+  /* diagram boxes */
+  .diagram{display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center;margin:6px 0 20px;padding:20px;background:#f8fafc;border-radius:12px;border:1px dashed var(--line)}
+  .node{border-radius:11px;padding:12px 14px;font-size:13px;font-weight:600;text-align:center;min-width:96px;border:2px solid}
+  .node small{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:2px}
+  .node.hp{background:var(--hp-soft);border-color:var(--hp-line);color:#115e59}
+  .node.wl{background:var(--wl-soft);border-color:var(--wl-line);color:var(--wl)}
+  .node.merged{background:linear-gradient(135deg,var(--hp-soft),var(--wl-soft));border-color:#94a3b8;color:var(--ink)}
+  .arrow{flex:0 0 44px;text-align:center;color:var(--muted);font-size:22px;line-height:1}
+  .arrow small{display:block;font-size:9px;letter-spacing:.3px;text-transform:uppercase;margin-top:2px}
+  .brandbox{border:2px dashed;border-radius:14px;padding:14px 12px 12px;position:relative;display:flex;align-items:center;gap:0;flex-wrap:wrap;justify-content:center}
+  .brandbox.hp{border-color:var(--hp-line)}
+  .brandbox.wl{border-color:var(--wl-line)}
+  .brandbox .blabel{position:absolute;top:-10px;left:14px;background:var(--card);font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;padding:0 6px}
+  .brandbox.hp .blabel{color:var(--hp)}
+  .brandbox.wl .blabel{color:var(--wl)}
+
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:6px}
+  .col h4{margin:0 0 8px;font-size:12px;letter-spacing:.5px;text-transform:uppercase;color:var(--muted)}
+  .col ul{margin:0;padding-left:0;list-style:none}
+  .col li{font-size:13.5px;padding:5px 0 5px 22px;position:relative}
+  .col li::before{position:absolute;left:0;top:5px;font-size:13px}
+  .col.good li::before{content:"✓";color:var(--good);font-weight:700}
+  .col.bad li::before{content:"✕";color:var(--bad);font-weight:700}
+  .codenote{margin-top:14px;font-size:12.5px;background:#f0fdfa;border:1px solid var(--hp-line);border-left:3px solid var(--hp);border-radius:8px;padding:9px 12px;color:#115e59}
+  .codenote.wl{background:#eef2f8;border-color:var(--wl-line);border-left-color:var(--wl);color:var(--wl)}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;background:#e2e8f0;padding:1px 5px;border-radius:4px}
+
+  .effort{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:600;padding:5px 11px;border-radius:8px;margin-bottom:16px}
+  .effort.low{background:#f0fdf4;color:var(--good);border:1px solid #bbf7d0}
+  .effort.high{background:#fff7ed;color:var(--warn);border:1px solid #fed7aa}
+
+  /* fork */
+  .fork{background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;border-radius:16px;padding:30px;margin-top:48px;text-align:center}
+  .fork h3{margin:0 0 6px;font-size:20px}
+  .fork p.q{font-size:16px;color:#cbd5e1;max-width:680px;margin:0 auto 22px}
+  .forkgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:760px;margin:0 auto;text-align:left}
+  .forkcard{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:12px;padding:16px}
+  .forkcard .if{font-size:12px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:#94a3b8;margin-bottom:6px}
+  .forkcard .then{font-size:14.5px;color:#f1f5f9}
+  .forkcard .then b{color:#fff}
+
+  .rec{background:#ecfdf5;border:1px solid #6ee7b7;border-radius:14px;padding:20px 24px;margin-top:24px}
+  .rec h4{margin:0 0 6px;color:var(--good);font-size:14px;letter-spacing:.5px;text-transform:uppercase}
+  .rec p{margin:0;font-size:15px;color:#000}
+  .rec p b{color:#000}
+  footer{text-align:center;color:var(--muted);font-size:12px;margin-top:50px}
+
+  @media(max-width:860px){
+    .halves{grid-template-columns:1fr}
+    .vs{padding:10px 0}
+    .cols,.forkgrid{grid-template-columns:1fr}
+    .arrow{flex-basis:100%;transform:rotate(90deg);padding:6px 0}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <h1>HealthPilot × Ted's Health White-Label</h1>
+    <p>Two products, one funnel — and the two honest ways to connect them.</p>
+  </header>
+
+  <!-- SECTION 1 -->
+  <section>
+    <div class="sec-label">Start here</div>
+    <h2 class="sec-title">They aren't two versions of the same thing. They're opposite halves of one funnel.</h2>
+
+    <div class="halves">
+      <!-- HP -->
+      <div class="half hp">
+        <span class="pill hp">HealthPilot</span>
+        <h3>The funnel &nbsp;<span style="font-size:20px">🔎</span></h3>
+        <div class="role">Demand side · finds &amp; qualifies</div>
+        <div class="flow">
+          <div class="step"><span class="n">1</span> Anonymous visitor (no login)</div>
+          <div class="step"><span class="n">2</span> AI health intake + optional bloods</div>
+          <div class="step"><span class="n">3</span> AI matches &amp; scores treatments</div>
+          <div class="step"><span class="n">4</span> Redirects out to a provider's website</div>
+        </div>
+        <div class="has"><h4>Genuinely good at</h4>
+          <div class="tags">
+            <span class="tag yes">AI intake</span>
+            <span class="tag yes">Match scoring</span>
+            <span class="tag yes">Blood interpretation</span>
+            <span class="tag yes">Zero-friction top of funnel</span>
+          </div>
+        </div>
+        <div class="hasnt"><h4>Does NOT do</h4>
+          <div class="tags">
+            <span class="tag no">Payments</span>
+            <span class="tag no">Consults</span>
+            <span class="tag no">Prescribing</span>
+            <span class="tag no">Pharmacy</span>
+            <span class="tag no">Multi-clinic</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="vs"><span>vs</span></div>
+
+      <!-- WL -->
+      <div class="half wl">
+        <span class="pill wl">Ted's Health WL</span>
+        <h3>The clinic &nbsp;<span style="font-size:20px">🏥</span></h3>
+        <div class="role">Supply side · treats &amp; bills</div>
+        <div class="flow">
+          <div class="step"><span class="n">1</span> Logged-in patient (Firebase account)</div>
+          <div class="step"><span class="n">2</span> TRT / ED pathway + blood tests</div>
+          <div class="step"><span class="n">3</span> Video consult → prescription → pharmacy</div>
+          <div class="step"><span class="n">4</span> Takes payment + pays the clinic out</div>
+        </div>
+        <div class="has"><h4>Genuinely good at</h4>
+          <div class="tags">
+            <span class="tag yes">Clinical pathways</span>
+            <span class="tag yes">Payments (Ryft)</span>
+            <span class="tag yes">Prescribing</span>
+            <span class="tag yes">CQC audit</span>
+            <span class="tag yes">Multi-tenant clinics</span>
+          </div>
+        </div>
+        <div class="hasnt"><h4>Does NOT do</h4>
+          <div class="tags">
+            <span class="tag no">Discovery</span>
+            <span class="tag no">Cold-visitor intake</span>
+            <span class="tag no">AI triage / matching</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="funnel-note">HealthPilot finds &amp; qualifies the patient. The White-Label treats &amp; bills them. Almost no feature overlap.</p>
+  </section>
+
+  <!-- SECTION 2 -->
+  <section>
+    <div class="sec-label">The decision</div>
+    <h2 class="sec-title">Two honest ways to connect them</h2>
+
+    <!-- OPTION 1 -->
+    <div class="opt">
+      <div class="ribbon">START HERE</div>
+      <h3>Option 1 — Bridge them</h3>
+      <p class="sub">Keep two products &amp; two brands. Connect them with a handoff. HealthPilot stays exactly as-is.</p>
+
+      <span class="effort low">● Low effort · fast · reversible</span>
+
+      <div class="diagram">
+        <div class="brandbox hp">
+          <span class="blabel">HealthPilot brand</span>
+          <div class="node hp">Intake<small>anonymous</small></div>
+          <div class="arrow">→</div>
+          <div class="node hp">AI match<small>picks men's health</small></div>
+        </div>
+        <div class="arrow">→<small>signed token<br>+ bloods</small></div>
+        <div class="brandbox wl">
+          <span class="blabel">Clinic brand</span>
+          <div class="node wl">Auto-login<small>/from/healthpilot</small></div>
+          <div class="arrow">→</div>
+          <div class="node wl">Pathway<small>skip-CBT if bloods</small></div>
+          <div class="arrow">→</div>
+          <div class="node wl">Treat + bill</div>
+        </div>
+      </div>
+
+      <div class="cols">
+        <div class="col good">
+          <h4>Why it works today</h4>
+          <ul>
+            <li>The receiving side already exists in WL</li>
+            <li>Bloods can enter via <code>sourceType = EXTERNAL</code> → triggers the skip-CBT path</li>
+            <li>WL already has an inbound webhook + idempotency layer</li>
+            <li>HealthPilot needs almost no change (respects "HP stays as-is")</li>
+          </ul>
+        </div>
+        <div class="col bad">
+          <h4>The trade-off</h4>
+          <ul>
+            <li>Two brands, two databases, two logins forever</li>
+            <li>Patient still makes a 2nd account on WL (pre-filled, but separate)</li>
+            <li>HP can't collect commission — no money flows through it</li>
+            <li>Right shape only IF HP is a true marketplace of many providers</li>
+          </ul>
+        </div>
+      </div>
+      <div class="codenote">Build = one inbound <code>POST /platform/handoff</code> + a <code>/from/healthpilot</code> auto-login page + 2 attribution columns on the patient. That's roughly it.</div>
+    </div>
+
+    <!-- OPTION 2 -->
+    <div class="opt">
+      <h3>Option 2 — Make HealthPilot the front door <em>for the White-Label</em></h3>
+      <p class="sub">One continuous journey under one brand. HP's "brain" (intake + AI matching) becomes the entry experience of the WL platform itself.</p>
+
+      <span class="effort high">● Bigger build · one brand · full control</span>
+
+      <div class="diagram">
+        <div class="brandbox wl" style="border-style:solid">
+          <span class="blabel" style="color:var(--ink)">One clinic brand, one journey</span>
+          <div class="node merged">AI intake<small>HP's brain, rebuilt in WL</small></div>
+          <div class="arrow">→</div>
+          <div class="node merged">Creates patient<small>no 2nd signup</small></div>
+          <div class="arrow">→</div>
+          <div class="node wl">Pathway</div>
+          <div class="arrow">→</div>
+          <div class="node wl">Treat + bill</div>
+        </div>
+      </div>
+
+      <div class="cols">
+        <div class="col good">
+          <h4>The upside</h4>
+          <ul>
+            <li>One brand, one journey, no double registration</li>
+            <li>Payments &amp; attribution fully under WL's control</li>
+            <li>The smoothest possible patient experience</li>
+          </ul>
+        </div>
+        <div class="col bad">
+          <h4>The trade-off</h4>
+          <ul>
+            <li>Much bigger build — you rebuild HP's good parts inside WL</li>
+            <li>You use ~30% of HP and drop the marketplace half (ratings, other providers, supplements)</li>
+            <li>It decides HP is <em>not</em> a marketplace — it's WL's marketing funnel</li>
+            <li>HP is wellness-generic; WL is men's-health — you narrow it on purpose</li>
+          </ul>
+        </div>
+      </div>
+      <div class="codenote wl">Because HP is read-only and Arief's team won't take big changes, "absorb" really means building a new discovery module inside WL — not merging the repos.</div>
+    </div>
+  </section>
+
+  <!-- FORK -->
+  <section>
+    <div class="fork">
+      <h3>The one question that decides it</h3>
+      <p class="q">The code can't answer this — only you can. It changes everything downstream:</p>
+      <div style="font-size:17px;font-weight:600;margin-bottom:22px">Is HealthPilot meant to be an <span style="color:var(--hp-line)">independent marketplace</span> listing many providers (incl. non-BGV)?<br>Or is it really just the <span style="color:#93c5fd">top-of-funnel for BGV's own men's-health clinics</span>?</p>
+      <div class="forkgrid">
+        <div class="forkcard">
+          <div class="if">If → independent marketplace</div>
+          <div class="then">Go <b>Option 1</b>, and never absorb. Ted's is one provider among many; the bridge is the whole point.</div>
+        </div>
+        <div class="forkcard">
+          <div class="if">If → really just BGV's funnel</div>
+          <div class="then">Go <b>Option 1 now</b> as a stepping stone, but you're heading to <b>Option 2</b> — build the bridge knowing that.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="rec">
+      <h4>My recommendation</h4>
+      <p><b>Start with Option 1 either way.</b> It's small, low-risk, reversible, and respects "HP stays as-is." It's also the first time HealthPilot would actually deliver a lead end-to-end — today its handoff is simulated and goes nowhere. Begin the bridge; let the answer to the question above tell us whether it's the destination or a stepping stone.</p>
+    </div>
+  </section>
+
+  <footer>Built from a direct read of both codebases · health-pilot-backend &amp; bgvai/th-whitelabel · for Felix</footer>
+
+</div>
+</body>
+</html>
